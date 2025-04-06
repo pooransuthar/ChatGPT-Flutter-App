@@ -1,139 +1,146 @@
 import 'package:flutter/material.dart';
-
-import 'models.dart';
+import 'package:flutter_gemini/flutter_gemini.dart';
+import 'models.dart' as models;
 
 class ConversationProvider extends ChangeNotifier {
-  List<Conversation> _conversations = [];
+  List<models.Conversation> _conversations = [];
   int _currentConversationIndex = 0;
-  String apikey = "YOUR_API_KEY";
+  String _yourChatGptApiKey = "YOUR_API_KEY";
+  String _yourGeminiApiKey = "AIzaSyB8fAk-k_mgdtYi12KawX3mBKbqWc8HBoA";
   String proxy = "";
-  List<Conversation> get conversations => _conversations;
-  int get currentConversationIndex => _currentConversationIndex;
-  String get currentConversationTitle =>
-      _conversations[_currentConversationIndex].title;
-  int get currentConversationLength =>
-      _conversations[_currentConversationIndex].messages.length;
-  String get yourApiKey => apikey;
-  String get yourProxy => proxy;
-  Conversation get currentConversation =>
-      _conversations[_currentConversationIndex];
-  // get current conversation's messages format
-  //'messages': [
-  //   {'role': 'user', 'content': text},
-  // ],
-  List<Map<String, String>> get currentConversationMessages {
-    List<Map<String, String>> messages = [
-      {
-        'role': "system",
-        'content': "",
-      }
-    ];
-    for (Message message
-        in _conversations[_currentConversationIndex].messages) {
-      messages.add({
-        'role': message.senderId == 'User' ? 'user' : 'system',
-        'content': message.content
-      });
-    }
-    return messages;
-  }
+  models.ApiType _selectedApiType = models.ApiType.gemini;
 
-  // initialize provider conversation list
   ConversationProvider() {
-    _conversations.add(Conversation(messages: [], title: 'new conversation'));
-  }
-
-  // change conversations
-  set conversations(List<Conversation> value) {
-    _conversations = value;
-    notifyListeners();
-  }
-
-  // change current conversation
-  set currentConversationIndex(int value) {
-    _currentConversationIndex = value;
-    notifyListeners();
-  }
-
-  // change api key
-  set yourApiKey(String value) {
-    apikey = value;
-    notifyListeners();
-  }
-
-  set yourProxy(String value) {
-    proxy = value;
-    notifyListeners();
-  }
-
-  // add to current conversation
-  void addMessage(Message message) {
-    _conversations[_currentConversationIndex].messages.add(message);
-    notifyListeners();
-  }
-
-  // add a new empty conversation
-  // default title is 'new conversation ${_conversations.length}'
-  void addEmptyConversation(String title) {
-    if (title == '') {
-      title = 'new conversation ${_conversations.length}';
+    _conversations.add(models.Conversation(
+      messages: [],
+      title: "New Chat",
+    ));
+    try {
+      Gemini.init(apiKey: _yourGeminiApiKey);
+    } catch (e) {
+      print('Error initializing Gemini: $e');
     }
-    _conversations.add(Conversation(messages: [], title: title));
+  }
+
+  // Getters
+  List<models.Conversation> get conversations => _conversations;
+  int get currentConversationIndex => _currentConversationIndex;
+  models.Conversation get currentConversation =>
+      _conversations[_currentConversationIndex];
+  String get currentConversationTitle => currentConversation.title;
+  int get currentConversationLength => currentConversation.messages.length;
+  List<models.Message> get currentConversationMessages =>
+      currentConversation.messages;
+  String get yourChatGptApiKey => _yourChatGptApiKey;
+  String get yourGeminiApiKey => _yourGeminiApiKey;
+  String get yourProxy => proxy;
+  models.ApiType get selectedApiType => _selectedApiType;
+
+  // API Key Management
+  void updateApiKeys(String chatGptKey, String geminiKey) {
+    _yourChatGptApiKey = chatGptKey;
+    _yourGeminiApiKey = geminiKey;
+
+    if (geminiKey.isNotEmpty &&
+        geminiKey != "YOUR_API_KEY" &&
+        geminiKey.startsWith("AI")) {
+      try {
+        Gemini.init(apiKey: geminiKey);
+      } catch (e) {
+        print('Error initializing Gemini: $e');
+      }
+    }
+    notifyListeners();
+  }
+
+  void setSelectedApiType(models.ApiType type) {
+    _selectedApiType = type;
+    notifyListeners();
+  }
+
+  models.ApiType get activeApiType {
+    if (_selectedApiType == models.ApiType.gemini &&
+        _yourGeminiApiKey.isNotEmpty &&
+        _yourGeminiApiKey != "YOUR_API_KEY" &&
+        _yourGeminiApiKey.startsWith("AI")) {
+      return models.ApiType.gemini;
+    }
+    return models.ApiType.chatgpt;
+  }
+
+  String get activeApiKey {
+    return activeApiType == models.ApiType.gemini
+        ? _yourGeminiApiKey
+        : _yourChatGptApiKey;
+  }
+
+  models.Sender get activeAiSender {
+    return models.Sender(
+      id: 'System',
+      name: activeApiType == models.ApiType.gemini ? 'Gemini' : 'ChatGPT',
+      avatarAssetPath: activeApiType == models.ApiType.gemini
+          ? 'resources/avatars/gemini.png'
+          : 'resources/avatars/ChatGPT_logo.png',
+    );
+  }
+
+  // Message Management
+  void addMessage(models.Message message) {
+    currentConversation.messages.add(message);
+    notifyListeners();
+  }
+
+  // Conversation Management
+  void setCurrentConversation(int index) {
+    _currentConversationIndex = index;
+    notifyListeners();
+  }
+
+  void addNewConversation() {
+    _conversations.add(models.Conversation(
+      messages: [],
+      title: "New Chat",
+    ));
     _currentConversationIndex = _conversations.length - 1;
     notifyListeners();
   }
 
-  // add new conversation
-  void addConversation(Conversation conversation) {
-    _conversations.add(conversation);
-    _currentConversationIndex = _conversations.length - 1;
-    notifyListeners();
-  }
-
-  // remove conversation by index
-  void removeConversation(int index) {
-    _conversations.removeAt(index);
-    _currentConversationIndex = _conversations.length - 1;
-    notifyListeners();
-  }
-
-  // remove current conversation
   void removeCurrentConversation() {
     _conversations.removeAt(_currentConversationIndex);
     _currentConversationIndex = _conversations.length - 1;
     if (_conversations.isEmpty) {
-      addEmptyConversation('');
+      addNewConversation();
     }
     notifyListeners();
   }
 
-  //rename conversation
-  void renameConversation(String title) {
-    if (title == "") {
-      // no title, use default title
-      title = 'new conversation $_currentConversationIndex';
-    }
-    _conversations[_currentConversationIndex].title = title;
+  void renameConversation(int index, String newTitle) {
+    _conversations[index] = models.Conversation(
+      title: newTitle,
+      messages: _conversations[index].messages,
+    );
     notifyListeners();
   }
 
-  // clear all conversations
-  void clearConversations() {
-    _conversations.clear();
-    addEmptyConversation('');
-    notifyListeners();
-  }
-
-  // clear current conversation
   void clearCurrentConversation() {
-    _conversations[_currentConversationIndex].messages.clear();
+    _conversations[_currentConversationIndex] = models.Conversation(
+      title: currentConversation.title,
+      messages: [],
+    );
+    notifyListeners();
+  }
+
+  void updateProxy(String newProxy) {
+    proxy = newProxy;
     notifyListeners();
   }
 }
 
 const String model = "gpt-3.5-turbo";
 
-final Sender systemSender = Sender(
-    name: 'System', avatarAssetPath: 'resources/avatars/ChatGPT_logo.png');
-final Sender userSender =
-    Sender(name: 'User', avatarAssetPath: 'resources/avatars/person.png');
+final models.Sender systemSender = models.Sender(
+    id: 'System',
+    name: 'System',
+    avatarAssetPath: 'resources/avatars/gemini.png');
+final models.Sender userSender = models.Sender(
+    id: 'User', name: 'User', avatarAssetPath: 'resources/avatars/person.png');

@@ -38,6 +38,9 @@ dependencies:
   flutter_svg: ^2.0.7
   http: ^1.1.0
   provider: ^6.0.5
+  file_picker: ^10.0.0
+  flutter_gemini: ^3.0.0
+  font_awesome_flutter: ^10.8.0
 
 dev_dependencies:
   flutter_test:
@@ -67,6 +70,7 @@ flutter:
     - resources/avatars/ChatGPT.svg
     - resources/avatars/ChatGPT_logo.png
     - resources/avatars/person.png
+    - resources/avatars/gemini.png
 
   fonts:
   - family: din-regular

@@ -67,15 +67,19 @@ class CustomPopupMenu extends StatelessWidget {
                   ),
                   TextButton(
                     child: const Text(
-                      'Rename'
-                      , style: TextStyle(
+                      'Rename',
+                      style: TextStyle(
                         color: Color(0xff55bb8e),
                       ),
-                      ),
+                    ),
                     onPressed: () {
                       // Call renameConversation method here with the new name
                       Provider.of<ConversationProvider>(context, listen: false)
-                          .renameConversation(newName);
+                          .renameConversation(
+                              Provider.of<ConversationProvider>(context,
+                                      listen: false)
+                                  .currentConversationIndex,
+                              newName);
                       Navigator.pop(context);
                     },
                   ),
